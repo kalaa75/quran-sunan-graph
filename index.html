@@ -1,173 +1,173 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>شبكة السنن القرأنية الـ 95</title>
-  <!-- استدعاء مكتبة Vis Network -->
-  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { display: flex; height: 100vh; background-color: #f8f9fa; overflow: hidden; }
-    #sidebar { width: 350px; background: #ffffff; border-left: 1px solid #e0e0e0; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
-    #main { flex: 1; display: flex; flex-direction: column; position: relative; }
-    #controls { padding: 15px; background: #fff; border-bottom: 1px solid #e0e0e0; z-index: 10; display: flex; gap: 10px; align-items: center; }
-    select { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; outline: none; }
-    #network-container { flex: 1; width: 100%; height: 100%; }
-    #loading-status { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.95); padding: 20px 30px; border-radius: 8px; border: 1px solid #ddd; font-weight: bold; color: #2c3e50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; z-index: 100; }
-    .node-details { line-height: 1.6; }
-    .node-details h2 { color: #2c3e50; font-size: 20px; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-bottom: 12px; }
-    .tag { display: inline-block; background: #e8f4f8; color: #2980b9; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
-    ul { padding-right: 20px; margin-top: 5px; }
-    li { margin-bottom: 4px; color: #555; }
-    .error-box { color: #c0392b; background: #fdf2e9; padding: 10px; border-radius: 6px; border: 1px solid #e67e22; font-size: 13px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شبكة السنن القرأنية</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { display: flex; height: 100vh; overflow: hidden; background: #f8fafc; color: #1e293b; }
+        #sidebar { width: 360px; background: #ffffff; border-left: 1px solid #e2e8f0; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: -2px 0 10px rgba(0,0,0,0.05); z-index: 10; overflow-y: auto; }
+        #network-container { flex: 1; height: 100%; position: relative; }
+        #mynetwork { width: 100%; height: 100%; }
+        h2 { color: #0f172a; font-size: 1.25rem; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+        .search-box { display: flex; flex-direction: column; gap: 5px; }
+        select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; background: #fff; }
+        .info-card { background: #f1f5f9; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .info-title { font-weight: bold; color: #1e3a8a; font-size: 1.1rem; }
+        .info-item { font-size: 0.9rem; line-height: 1.5; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; background: #3b82f6; color: white; margin-left: 5px; }
+        #status-msg { color: #64748b; font-size: 0.9rem; font-style: italic; }
+    </style>
 </head>
 <body>
 
-  <!-- اللوحة الجانبية -->
-  <div id="sidebar">
-    <div id="sidebar-content">
-      <h2>شبكة السنن القرأنية</h2>
-      <p style="color: #7f8c8d; font-size: 14px;">اختر سنة من القائمة أو انقر على أي عقدة في الشبكة لفيزياء العلاقات والتحليل السببي.</p>
+    <div id="sidebar">
+        <h2>شبكة السنن القرأنية</h2>
+        
+        <div class="search-box">
+            <label for="sunan-select"><b>البحث عن سنة:</b></label>
+            <select id="sunan-select">
+                <option value="">جاري تحميل القائمة...</option>
+            </select>
+        </div>
+
+        <div id="status-msg">جارٍ الاتصال بملف البيانات...</div>
+
+        <div id="details-panel" class="info-card" style="display: none;">
+            <div id="node-title" class="info-title"></div>
+            <div>
+                <span id="node-domain" class="badge"></span>
+                <span id="node-level" class="badge" style="background:#10b981;"></span>
+            </div>
+            <div id="node-def" class="info-item"></div>
+            <hr style="border: 0; border-top: 1px solid #cbd5e1;">
+            <div id="node-cause-in" class="info-item"></div>
+            <div id="node-cause-proc" class="info-item"></div>
+            <div id="node-cause-out" class="info-item"></div>
+        </div>
     </div>
-  </div>
 
-  <!-- المنطقة الرئيسية -->
-  <div id="main">
-    <div id="controls">
-      <label for="sunan-select"><strong>البحث عن سنة:</strong></label>
-      <select id="sunan-select">
-        <option value="">جاري تحميل القائمة...</option>
-      </select>
+    <div id="network-container">
+        <div id="mynetwork"></div>
     </div>
 
-    <div id="loading-status">جاري تحميل شبكة السنن الـ 95 بالكامل...</div>
-    <div id="network-container"></div>
-  </div>
+    <script>
+        let network = null;
+        let nodesDataSet = null;
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const statusDiv = document.getElementById('loading-status');
-      
-      // جلب البيانات من ملف JSON
-      fetch('./sunan_data.json')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`تعذر العثور على الملف (HTTP ${response.status})`);
-          }
-          return response.json();
-        })
-        .then(graphData => {
-          // التحقق من صحة البيانات
-          if (!graphData.nodes || graphData.nodes.length === 0) {
-            throw new Error("ملف sunan_data.json فارغ أو لا يحتوي على مصفوفة nodes!");
-          }
+        async function initGraph() {
+            const statusEl = document.getElementById('status-msg');
+            const selectEl = document.getElementById('sunan-select');
 
-          // إخفاء مؤشر التحميل
-          statusDiv.style.display = 'none';
-
-          // تهيئة عناصر Vis Network
-          const nodes = new vis.DataSet(graphData.nodes);
-          const edges = new vis.DataSet(graphData.edges || []);
-
-          const container = document.getElementById('network-container');
-          const data = { nodes: nodes, edges: edges };
-
-          const options = {
-            nodes: {
-              shape: 'dot',
-              size: 18,
-              font: { size: 13, color: '#2c3e50' },
-              borderWidth: 2
-            },
-            edges: {
-              width: 1.5,
-              color: { color: '#bdc3c7', highlight: '#3498db' },
-              arrows: { to: { enabled: true, scaleFactor: 0.6 } },
-              smooth: { type: 'continuous' }
-            },
-            physics: {
-              stabilization: { iterations: 150 },
-              barnesHut: { gravitationalConstant: -2000, springLength: 90 }
-            },
-            interaction: { hover: true }
-          };
-
-          const network = new vis.Network(container, data, options);
-
-          // تعبئة القائمة المنسدلة
-          const selector = document.getElementById('sunan-select');
-          selector.innerHTML = '<option value="">-- اختر سنة قرأنية (95 سنة) --</option>';
-
-          graphData.nodes.forEach(node => {
-            const opt = document.createElement('option');
-            opt.value = node.id;
-            opt.textContent = `${node.id}. ${node.label || node.title}`;
-            selector.appendChild(opt);
-          });
-
-          // التفاعل مع القائمة المنسدلة
-          selector.addEventListener('change', (e) => {
-            const val = e.target.value;
-            if (val) showNodeDetails(val);
-          });
-
-          // التفاعل مع النقر على الشبكة
-          network.on("click", (params) => {
-            if (params.nodes.length > 0) {
-              const nodeId = params.nodes[0];
-              selector.value = nodeId;
-              showNodeDetails(nodeId);
-            }
-          });
-
-          // دالة عرض التفاصيل
-          function showNodeDetails(nodeId) {
-            network.focus(nodeId, { scale: 1.2, animation: { duration: 800 } });
-            network.selectNodes([nodeId]);
-
-            const selectedNode = nodes.get(nodeId);
-            const connectedEdges = edges.get(network.getConnectedEdges(nodeId));
-
-            let inputs = [];
-            let outputs = [];
-
-            connectedEdges.forEach(edge => {
-              if (edge.to == nodeId) {
-                const f = nodes.get(edge.from);
-                if (f) inputs.push(f.label || f.title);
-              } else if (edge.from == nodeId) {
-                const t = nodes.get(edge.to);
-                if (t) outputs.push(t.label || t.title);
-              }
-            });
-
-            const sidebar = document.getElementById('sidebar-content');
-            sidebar.innerHTML = `
-              <div class="node-details">
-                <span class="tag">${selectedNode.group || selectedNode.domain || 'سنة إلهية'}</span>
-                <h2>${selectedNode.label || selectedNode.title}</h2>
-                <p style="margin-bottom: 12px;"><strong>المعادلة السببية:</strong><br><em>${selectedNode.formula || selectedNode.description || 'غير محددة'}</em></p>
+            try {
+                statusEl.textContent = "جاري قراءة ملف البيانات...";
+                const response = await fetch('sunan_data.json');
                 
-                <h4 style="color: #27ae60; margin-top: 15px;">المدخلات (الأسباب):</h4>
-                <ul>${inputs.length ? inputs.map(i => `<li>${i}</li>`).join('') : '<li>لا يوجد</li>'}</ul>
+                if (!response.ok) {
+                    throw new Error(`تعذر تحميل الملف (رمز الخطأ: ${response.status})`);
+                }
 
-                <h4 style="color: #c0392b; margin-top: 15px;">المخرجات (النتائج):</h4>
-                <ul>${outputs.length ? outputs.map(o => `<li>${o}</li>`).join('') : '<li>لا يوجد</li>'}</ul>
-              </div>
-            `;
-          }
+                const data = await response.json();
 
-        })
-        .catch(err => {
-          console.error("Error:", err);
-          statusDiv.innerHTML = `<div class="error-box">
-            ❌ <strong>فشل تحميل الشبكة:</strong><br>${err.message}<br><br>
-            <em>تأكد من أن ملف sunan_data.json يحتوي على بيانات JSON صحيحة وغير فارغ.</em>
-          </div>`;
-        });
-    });
-  </script>
+                if (!data.nodes || !Array.isArray(data.nodes)) {
+                    throw new Error("تنسيق JSON لا يحتوي على مصفوفة nodes صحيحة");
+                }
+
+                // معالجة العُقد بصورة مرنة
+                const formattedNodes = data.nodes.map(node => {
+                    const labelText = node.label || node.title || node.id;
+                    return {
+                        id: node.id,
+                        label: labelText.length > 30 ? labelText.substring(0, 30) + '...' : labelText,
+                        title: node.title || labelText,
+                        raw: node,
+                        shape: 'dot',
+                        size: 16,
+                        font: { size: 14, face: 'system-ui' }
+                    };
+                });
+
+                // معالجة الروابط
+                const formattedEdges = (data.edges || []).map(edge => ({
+                    from: edge.from,
+                    to: edge.to,
+                    label: edge.label || '',
+                    arrows: 'to',
+                    font: { size: 10, align: 'middle' },
+                    color: { color: '#94a3b8' }
+                }));
+
+                nodesDataSet = new vis.DataSet(formattedNodes);
+                const edgesDataSet = new vis.DataSet(formattedEdges);
+
+                const container = document.getElementById('mynetwork');
+                const graphData = { nodes: nodesDataSet, edges: edgesDataSet };
+
+                const options = {
+                    nodes: { color: { background: '#3b82f6', border: '#1d4ed8', highlight: { background: '#ef4444', border: '#b91c1c' } } },
+                    physics: { barnesHut: { gravitationalConstant: -3000, springLength: 95 } },
+                    interaction: { hover: true, tooltipDelay: 200 }
+                };
+
+                network = new vis.Network(container, graphData, options);
+
+                // ملء القائمة المنسدلة
+                selectEl.innerHTML = '<option value="">-- اختر سنة من القائمة (' + formattedNodes.length + ' سنة) --</option>';
+                data.nodes.forEach(node => {
+                    const opt = document.createElement('option');
+                    opt.value = node.id;
+                    opt.textContent = `${node.id}: ${node.title || node.label}`;
+                    selectEl.appendChild(opt);
+                });
+
+                statusEl.textContent = `تم تحميل ${formattedNodes.length} سنة بنجاح!`;
+
+                // التفاعل عند النقر
+                network.on("selectNode", function (params) {
+                    if (params.nodes.length > 0) {
+                        const nodeId = params.nodes[0];
+                        selectEl.value = nodeId;
+                        displayNodeDetails(nodeId, data.nodes);
+                    }
+                });
+
+                selectEl.addEventListener('change', function () {
+                    const nodeId = this.value;
+                    if (nodeId) {
+                        network.selectNodes([nodeId]);
+                        network.focus(nodeId, { scale: 1.2, animation: true });
+                        displayNodeDetails(nodeId, data.nodes);
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                statusEl.style.color = 'red';
+                statusEl.textContent = "حدث خطأ: " + err.message;
+                selectEl.innerHTML = '<option value="">فشل التحميل</option>';
+            }
+        }
+
+        function displayNodeDetails(nodeId, rawNodes) {
+            const panel = document.getElementById('details-panel');
+            const node = rawNodes.find(n => n.id === nodeId);
+
+            if (!node) return;
+
+            panel.style.display = 'flex';
+            document.getElementById('node-title').textContent = node.title || node.label || node.id;
+            document.getElementById('node-domain').textContent = node.domain || 'عام';
+            document.getElementById('node-level').textContent = node.level || 'سنّة';
+            document.getElementById('node-def').innerHTML = `<b>التعريف:</b> ${node.definition || 'لا يوجد تعريف متاح'}`;
+            
+            document.getElementById('node-cause-in').innerHTML = node.cause_input ? `<b>المُدخلات:</b> ${node.cause_input}` : '';
+            document.getElementById('node-cause-proc').innerHTML = node.cause_process ? `<b>المعالجة والتدافع:</b> ${node.cause_process}` : '';
+            document.getElementById('node-cause-out').innerHTML = node.cause_output ? `<b>المخرجات والأثر:</b> ${node.cause_output}` : '';
+        }
+
+        window.addEventListener('DOMContentLoaded', initGraph);
+    </script>
 </body>
 </html>
