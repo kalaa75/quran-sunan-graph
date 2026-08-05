@@ -3,171 +3,241 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>شبكة السنن القرأنية الـ 95</title>
-  <!-- استدعاء مكتبة Vis Network -->
+  <title>شبكة السنن الإلهية والمقاصد القرآنية الشاملة (95 سنة)</title>
+  <!-- مكتبة Vis Network للرسم البياني التفاعلي -->
   <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { display: flex; height: 100vh; background-color: #f8f9fa; overflow: hidden; }
-    #sidebar { width: 350px; background: #ffffff; border-left: 1px solid #e0e0e0; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
-    #main { flex: 1; display: flex; flex-direction: column; position: relative; }
-    #controls { padding: 15px; background: #fff; border-bottom: 1px solid #e0e0e0; z-index: 10; display: flex; gap: 10px; align-items: center; }
-    select { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; outline: none; }
-    #network-container { flex: 1; width: 100%; height: 100%; }
-    #loading-status { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.95); padding: 20px 30px; border-radius: 8px; border: 1px solid #ddd; font-weight: bold; color: #2c3e50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; z-index: 100; }
-    .node-details { line-height: 1.6; }
-    .node-details h2 { color: #2c3e50; font-size: 20px; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-bottom: 12px; }
-    .tag { display: inline-block; background: #e8f4f8; color: #2980b9; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
-    ul { padding-right: 20px; margin-top: 5px; }
-    li { margin-bottom: 4px; color: #555; }
-    .error-box { color: #c0392b; background: #fdf2e9; padding: 10px; border-radius: 6px; border: 1px solid #e67e22; font-size: 13px; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin: 0; padding: 0; background-color: #f8fafc; display: flex; flex-direction: column; height: 100vh; }
+    
+    header { background: #0f172a; color: white; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    header h2 { margin: 0 15px 0 0; font-size: 1.1rem; color: #38bdf8; white-space: nowrap; }
+    
+    .control-group { display: flex; align-items: center; gap: 6px; }
+    label { font-size: 0.8rem; color: #94a3b8; }
+    select, input, button { padding: 6px 10px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; font-size: 0.85rem; outline: none; }
+    select:focus { border-color: #38bdf8; }
+    button { background: #0284c7; cursor: pointer; border: none; font-weight: bold; transition: background 0.2s; }
+    button:hover { background: #0369a1; }
+
+    .main-container { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar { width: 340px; background: white; border-left: 1px solid #e2e8f0; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .sidebar h3 { margin: 0; color: #0f172a; border-bottom: 2px solid #0284c7; padding-bottom: 6px; font-size: 1.05rem; }
+    .details-card { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-size: 0.88rem; line-height: 1.5; color: #1e293b; }
+    .details-card h4 { margin: 0 0 6px 0; color: #0369a1; font-size: 0.95rem; }
+    .details-card ul { padding-right: 18px; margin: 6px 0; }
+    
+    #network-container { flex: 1; height: 100%; background: #ffffff; position: relative; }
+    .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; font-size: 1.2rem; color: #0284c7; font-weight: bold; z-index: 10; }
   </style>
 </head>
 <body>
 
-  <!-- اللوحة الجانبية -->
-  <div id="sidebar">
-    <div id="sidebar-content">
-      <h2>شبكة السنن القرأنية</h2>
-      <p style="color: #7f8c8d; font-size: 14px;">اختر سنة من القائمة أو انقر على أي عقدة في الشبكة لفيزياء العلاقات والتحليل السببي.</p>
-    </div>
-  </div>
-
-  <!-- المنطقة الرئيسية -->
-  <div id="main">
-    <div id="controls">
-      <label for="sunan-select"><strong>البحث عن سنة:</strong></label>
-      <select id="sunan-select">
-        <option value="">جاري تحميل القائمة...</option>
+  <header>
+    <h2>شبكة السنن الإلهية (95 سنة)</h2>
+    
+    <!-- القائمة الديناميكية لجميع السنن -->
+    <div class="control-group">
+      <label for="sunnah-select">اختر السنة/المقصد:</label>
+      <select id="sunnah-select" style="max-width: 280px;" onchange="focusOnSunnah(this.value)">
+        <option value="ALL">-- عرض كافة السنن (95 سنة) --</option>
       </select>
     </div>
 
-    <div id="loading-status">جاري تحميل شبكة السنن الـ 95 بالكامل...</div>
-    <div id="network-container"></div>
+    <!-- تصفية حسب المجال -->
+    <div class="control-group">
+      <label for="domain-select">المجال:</label>
+      <select id="domain-select" onchange="filterByDomain(this.value)">
+        <option value="ALL">كافة المجالات</option>
+      </select>
+    </div>
+
+    <!-- تخطيط الشبكة -->
+    <div class="control-group">
+      <label for="layout-select">التخطيط:</label>
+      <select id="layout-select" onchange="changeLayout(this.value)">
+        <option value="physics">تفاعلي عشوائي (Physics)</option>
+        <option value="hierarchical">شجري هرمي (Hierarchical)</option>
+      </select>
+    </div>
+
+    <button onclick="resetView()">إعادة ضبط</button>
+  </header>
+
+  <div class="main-container">
+    <div class="sidebar">
+      <h3>تفاصيل السنة والتفريعات</h3>
+      <div id="details-panel">
+        <p style="color: #64748b;">اختر أو انقر على أي سنة من الـ 95 في الشبكة لاستعراض تعريفها وتفريعاتها ومعادلتها السببية بالكامل.</p>
+      </div>
+    </div>
+
+    <div id="network-container">
+      <div id="loading" class="loading-overlay">جاري تحميل شبكة السنن الـ 95 بالكامل...</div>
+    </div>
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const statusDiv = document.getElementById('loading-status');
+    let allNodes = [];
+    let allEdges = [];
+    let network = null;
+    let nodesDataset = new vis.DataSet();
+    let edgesDataset = new vis.DataSet();
+
+    // جلب ملف JSON المجمّع تلقائياً عند فتح الصفحة
+    fetch('sunan_data.json')
+      .then(response => {
+        if (!response.ok) throw new Error("تعذر جلب ملف sunan_data.json");
+        return response.json();
+      })
+      .then(data => {
+        allNodes = data.nodes;
+        allEdges = data.edges;
+
+        document.getElementById('loading').style.display = 'none';
+        initDropdowns();
+        initNetwork();
+      })
+      .catch(err => {
+        document.getElementById('loading').innerText = "خطأ: تعذر تحميل ملف البيانات sunan_data.json. تأكد من وجوده في نفس مجلد الصفحة.";
+        console.error(err);
+      });
+
+    // 1. ملء قوائم الخيارات تلقائياً من البيانات
+    function initDropdowns() {
+      const sunnahSelect = document.getElementById('sunnah-select');
+      const domainSelect = document.getElementById('domain-select');
       
-      // جلب البيانات من ملف JSON
-      fetch('./sunan_data.json')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`تعذر العثور على الملف (HTTP ${response.status})`);
-          }
-          return response.json();
-        })
-        .then(graphData => {
-          // التحقق من صحة البيانات
-          if (!graphData.nodes || graphData.nodes.length === 0) {
-            throw new Error("ملف sunan_data.json فارغ أو لا يحتوي على مصفوفة nodes!");
-          }
+      const domainsSet = new Set();
 
-          // إخفاء مؤشر التحميل
-          statusDiv.style.display = 'none';
+      allNodes.forEach(n => {
+        // إضافة السنة للقائمة
+        const opt = document.createElement('option');
+        opt.value = n.id;
+        opt.textContent = `${n.id}: ${n.title}`;
+        sunnahSelect.appendChild(opt);
 
-          // تهيئة عناصر Vis Network
-          const nodes = new vis.DataSet(graphData.nodes);
-          const edges = new vis.DataSet(graphData.edges || []);
+        // جمع المجالات لملء قائمة الفلترة
+        if (n.domain) domainsSet.add(n.domain);
+      });
 
-          const container = document.getElementById('network-container');
-          const data = { nodes: nodes, edges: edges };
+      domainsSet.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        domainSelect.appendChild(opt);
+      });
+    }
 
-          const options = {
-            nodes: {
-              shape: 'dot',
-              size: 18,
-              font: { size: 13, color: '#2c3e50' },
-              borderWidth: 2
-            },
-            edges: {
-              width: 1.5,
-              color: { color: '#bdc3c7', highlight: '#3498db' },
-              arrows: { to: { enabled: true, scaleFactor: 0.6 } },
-              smooth: { type: 'continuous' }
-            },
-            physics: {
-              stabilization: { iterations: 150 },
-              barnesHut: { gravitationalConstant: -2000, springLength: 90 }
-            },
-            interaction: { hover: true }
-          };
+    // 2. تهيئة وتدشين رسم الشبكة
+    function initNetwork() {
+      const container = document.getElementById('network-container');
 
-          const network = new vis.Network(container, data, options);
+      nodesDataset.clear();
+      edgesDataset.clear();
 
-          // تعبئة القائمة المنسدلة
-          const selector = document.getElementById('sunan-select');
-          selector.innerHTML = '<option value="">-- اختر سنة قرأنية (95 سنة) --</option>';
+      nodesDataset.add(allNodes.map(n => ({
+        id: n.id,
+        label: `${n.id}\n${n.title}`,
+        group: n.domain,
+        shape: 'box',
+        margin: 8,
+        font: { face: 'Segoe UI', size: 12 }
+      })));
 
-          graphData.nodes.forEach(node => {
-            const opt = document.createElement('option');
-            opt.value = node.id;
-            opt.textContent = `${node.id}. ${node.label || node.title}`;
-            selector.appendChild(opt);
-          });
+      edgesDataset.add(allEdges.map((e, idx) => ({
+        id: idx,
+        from: e.from,
+        to: e.to,
+        label: e.label,
+        arrows: 'to',
+        font: { align: 'middle', size: 9 },
+        color: { color: '#94a3b8' }
+      })));
 
-          // التفاعل مع القائمة المنسدلة
-          selector.addEventListener('change', (e) => {
-            const val = e.target.value;
-            if (val) showNodeDetails(val);
-          });
+      const graphData = { nodes: nodesDataset, edges: edgesDataset };
+      
+      const options = {
+        nodes: { borderWidth: 1, shadow: true },
+        physics: {
+          barnesHut: { gravitationalConstant: -4000, springLength: 140 }
+        }
+      };
 
-          // التفاعل مع النقر على الشبكة
-          network.on("click", (params) => {
-            if (params.nodes.length > 0) {
-              const nodeId = params.nodes[0];
-              selector.value = nodeId;
-              showNodeDetails(nodeId);
-            }
-          });
+      network = new vis.Network(container, graphData, options);
 
-          // دالة عرض التفاصيل
-          function showNodeDetails(nodeId) {
-            network.focus(nodeId, { scale: 1.2, animation: { duration: 800 } });
-            network.selectNodes([nodeId]);
+      // تفاصيل العقدة عند النقر
+      network.on("click", function (params) {
+        if (params.nodes.length > 0) {
+          showSunnahDetails(params.nodes[0]);
+        }
+      });
+    }
 
-            const selectedNode = nodes.get(nodeId);
-            const connectedEdges = edges.get(network.getConnectedEdges(nodeId));
+    // 3. عرض تفاصيل السنة والتفريعات في اللوحة الجانبية
+    function showSunnahDetails(sunnahId) {
+      const sunnah = allNodes.find(n => n.id === sunnahId);
+      if (!sunnah) return;
 
-            let inputs = [];
-            let outputs = [];
+      let branchesList = sunnah.branches && sunnah.branches.length > 0
+        ? sunnah.branches.map(b => `<li>${b}</li>`).join("")
+        : "<li>لا توجد تفريعات جزئية مسجلة</li>";
 
-            connectedEdges.forEach(edge => {
-              if (edge.to == nodeId) {
-                const f = nodes.get(edge.from);
-                if (f) inputs.push(f.label || f.title);
-              } else if (edge.from == nodeId) {
-                const t = nodes.get(edge.to);
-                if (t) outputs.push(t.label || t.title);
-              }
-            });
+      document.getElementById('details-panel').innerHTML = `
+        <div class="details-card">
+          <h4>${sunnah.id}: ${sunnah.title}</h4>
+          <p><strong>المجال:</strong> ${sunnah.domain} (${sunnah.level})</p>
+          <p><strong>التعريف:</strong> ${sunnah.definition}</p>
+          <hr style="border:0; border-top:1px solid #cbd5e1; margin:8px 0;">
+          <p><strong>المعادلة السببية:</strong></p>
+          <p style="font-size:0.82rem;"><strong>المدخلات:</strong> ${sunnah.cause_input}</p>
+          <p style="font-size:0.82rem;"><strong>العملية:</strong> ${sunnah.cause_process}</p>
+          <p style="font-size:0.82rem;"><strong>المخرجات:</strong> ${sunnah.cause_output}</p>
+          <hr style="border:0; border-top:1px solid #cbd5e1; margin:8px 0;">
+          <p><strong>التفريعات المقاصدية (${sunnah.branches.length}):</strong></p>
+          <ul>${branchesList}</ul>
+        </div>
+      `;
+    }
 
-            const sidebar = document.getElementById('sidebar-content');
-            sidebar.innerHTML = `
-              <div class="node-details">
-                <span class="tag">${selectedNode.group || selectedNode.domain || 'سنة إلهية'}</span>
-                <h2>${selectedNode.label || selectedNode.title}</h2>
-                <p style="margin-bottom: 12px;"><strong>المعادلة السببية:</strong><br><em>${selectedNode.formula || selectedNode.description || 'غير محددة'}</em></p>
-                
-                <h4 style="color: #27ae60; margin-top: 15px;">المدخلات (الأسباب):</h4>
-                <ul>${inputs.length ? inputs.map(i => `<li>${i}</li>`).join('') : '<li>لا يوجد</li>'}</ul>
+    // 4. وظائف الفلترة والتركيز
+    function focusOnSunnah(sunnahId) {
+      if (sunnahId === "ALL") {
+        resetView();
+        return;
+      }
+      network.focus(sunnahId, { scale: 1.2, animation: true });
+      network.selectNodes([sunnahId]);
+      showSunnahDetails(sunnahId);
+    }
 
-                <h4 style="color: #c0392b; margin-top: 15px;">المخرجات (النتائج):</h4>
-                <ul>${outputs.length ? outputs.map(o => `<li>${o}</li>`).join('') : '<li>لا يوجد</li>'}</ul>
-              </div>
-            `;
-          }
+    function filterByDomain(domain) {
+      if (domain === "ALL") {
+        nodesDataset.clear();
+        nodesDataset.add(allNodes.map(n => ({ id: n.id, label: `${n.id}\n${n.title}`, group: n.domain, shape: 'box' })));
+      } else {
+        const filtered = allNodes.filter(n => n.domain === domain);
+        nodesDataset.clear();
+        nodesDataset.add(filtered.map(n => ({ id: n.id, label: `${n.id}\n${n.title}`, group: n.domain, shape: 'box' })));
+      }
+    }
 
-        })
-        .catch(err => {
-          console.error("Error:", err);
-          statusDiv.innerHTML = `<div class="error-box">
-            ❌ <strong>فشل تحميل الشبكة:</strong><br>${err.message}<br><br>
-            <em>تأكد من أن ملف sunan_data.json يحتوي على بيانات JSON صحيحة وغير فارغ.</em>
-          </div>`;
-        });
-    });
+    function changeLayout(layoutType) {
+      if (layoutType === "hierarchical") {
+        network.setOptions({ layout: { hierarchical: { direction: 'LR', sortMethod: 'directed' } } });
+      } else {
+        network.setOptions({ layout: { hierarchical: false }, physics: { enabled: true } });
+      }
+    }
+
+    function resetView() {
+      network.fit({ animation: true });
+      document.getElementById('sunnah-select').value = "ALL";
+      document.getElementById('domain-select').value = "ALL";
+      filterByDomain("ALL");
+    }
   </script>
 </body>
 </html>
