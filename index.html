@@ -79,165 +79,153 @@
     </div>
   </div>
 
-  <script>
-    let allNodes = [];
-    let allEdges = [];
-    let network = null;
-    let nodesDataset = new vis.DataSet();
-    let edgesDataset = new vis.DataSet();
-
-    // جلب ملف JSON المجمّع تلقائياً عند فتح الصفحة
-    fetch('sunan_data.json')
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // 1. جلب البيانات من ملف JSON
+    fetch('./sunan_data.json')
       .then(response => {
-        if (!response.ok) throw new Error("تعذر جلب ملف sunan_data.json");
+        if (!response.ok) {
+          throw new Error("HTTP error " + response.status);
+        }
         return response.json();
       })
-      .then(data => {
-        allNodes = data.nodes;
-        allEdges = data.edges;
+      .then(graphData => {
+        // إنشاء مصفوفات Vis Network
+        const nodes = new vis.DataSet(graphData.nodes || []);
+        const edges = new vis.DataSet(graphData.edges || []);
 
-        document.getElementById('loading').style.display = 'none';
-        initDropdowns();
-        initNetwork();
+        // تحديد حاوي الشبكة
+        const container = document.getElementById('network-container') || document.getElementById('network');
+        if (!container) {
+          console.error("لم يتم العثور على عنصر حاوي الشبكة في HTML!");
+          return;
+        }
+
+        const data = { nodes: nodes, edges: edges };
+
+        // خيارات تنسيق الشبكة والفيزياء
+        const options = {
+          nodes: {
+            shape: 'dot',
+            size: 20,
+            font: { size: 14, color: '#2c3e50', face: 'arial' },
+            borderWidth: 2
+          },
+          edges: {
+            width: 2,
+            color: { inherit: 'from' },
+            arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+            smooth: { type: 'continuous' }
+          },
+          physics: {
+            stabilization: true,
+            barnesHut: {
+              gravitationalConstant: -3000,
+              springLength: 95
+            }
+          },
+          interaction: {
+            hover: true,
+            tooltipDelay: 200
+          }
+        };
+
+        // 2. تهيئة وتدشين الشبكة
+        const network = new vis.Network(container, data, options);
+
+        // 3. ملء القائمة المنسدلة للسنن الـ 95 (إذا كانت موجودة)
+        const selector = document.getElementById('sunan-select') || document.getElementById('select-node');
+        if (selector) {
+          // تفريغ القائمة من أي خيارات سابقة
+          selector.innerHTML = '<option value="">-- اختر سنة قرأنية --</option>';
+
+          graphData.nodes.forEach(node => {
+            const option = document.createElement('option');
+            option.value = node.id;
+            option.textContent = `${node.id}. ${node.label || node.title}`;
+            selector.appendChild(option);
+          });
+
+          // التفاعل عند تغيير خيار القائمة المنسدلة
+          selector.addEventListener('change', (e) => {
+            const selectedId = e.target.value;
+            if (selectedId) {
+              focusAndShowDetails(selectedId);
+            }
+          });
+        }
+
+        // 4. التفاعل عند النقر المباشر على العُقد داخل الشبكة
+        network.on("click", function (params) {
+          if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            if (selector) selector.value = nodeId; // تحديث الخيار المحدد في القائمة
+            focusAndShowDetails(nodeId);
+          }
+        });
+
+        // دالة التكبير وعرض التفاصيل في اللوحة الجانبية
+        function focusAndShowDetails(nodeId) {
+          // التكبير والتركيز على العقدة في الشبكة
+          network.focus(nodeId, {
+            scale: 1.3,
+            animation: {
+              duration: 800,
+              easingFunction: 'easeInOutQuad'
+            }
+          });
+          network.selectNodes([nodeId]);
+
+          // جلب بيانات العُقدة المحددة
+          const selectedNode = nodes.get(nodeId);
+          
+          // البحث عن العُقد المرتبطة بها (مدخلات ومخرجات)
+          const connectedEdgeIds = network.getConnectedEdges(nodeId);
+          const connectedEdges = edges.get(connectedEdgeIds);
+          
+          let inputs = [];
+          let outputs = [];
+
+          connectedEdges.forEach(edge => {
+            if (edge.to == nodeId) {
+              const fromNode = nodes.get(edge.from);
+              if (fromNode) inputs.push(fromNode.label || fromNode.title);
+            } else if (edge.from == nodeId) {
+              const toNode = nodes.get(edge.to);
+              if (toNode) outputs.push(toNode.label || toNode.title);
+            }
+          });
+
+          // عرض التفاصيل في اللوحة الجانبية
+          const sidebar = document.getElementById('sidebar-content') || document.getElementById('details');
+          if (sidebar && selectedNode) {
+            sidebar.innerHTML = `
+              <div class="node-details">
+                <h2 style="color: #2c3e50; margin-top: 0;">${selectedNode.label || selectedNode.title}</h2>
+                <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
+                <p><strong>المجال / التصنيف:</strong> ${selectedNode.group || selectedNode.domain || 'عام'}</p>
+                <p><strong>المعادلة السببية:</strong> <em>${selectedNode.formula || selectedNode.description || 'غير محددة'}</em></p>
+                
+                <div style="margin-top: 15px;">
+                  <h4 style="margin-bottom: 5px; color: #27ae60;">المدخلات (الأسباب المؤدية):</h4>
+                  <ul>${inputs.length ? inputs.map(i => `<li>${i}</li>`).join('') : '<li>لا توجد مدخلات مباشرة</li>'}</ul>
+                </div>
+
+                <div style="margin-top: 15px;">
+                  <h4 style="margin-bottom: 5px; color: #c0392b;">المخرجات (النتائج المترتبة):</h4>
+                  <ul>${outputs.length ? outputs.map(o => `<li>${o}</li>`).join('') : '<li>لا توجد مخرجات مباشرة</li>'}</ul>
+                </div>
+              </div>
+            `;
+          }
+        }
+
       })
-      .catch(err => {
-        document.getElementById('loading').innerText = "خطأ: تعذر تحميل ملف البيانات sunan_data.json. تأكد من وجوده في نفس مجلد الصفحة.";
-        console.error(err);
+      .catch(error => {
+        console.error("خطأ أثناء تحميل وتطبيق شبكة السنن:", error);
       });
-
-    // 1. ملء قوائم الخيارات تلقائياً من البيانات
-    function initDropdowns() {
-      const sunnahSelect = document.getElementById('sunnah-select');
-      const domainSelect = document.getElementById('domain-select');
-      
-      const domainsSet = new Set();
-
-      allNodes.forEach(n => {
-        // إضافة السنة للقائمة
-        const opt = document.createElement('option');
-        opt.value = n.id;
-        opt.textContent = `${n.id}: ${n.title}`;
-        sunnahSelect.appendChild(opt);
-
-        // جمع المجالات لملء قائمة الفلترة
-        if (n.domain) domainsSet.add(n.domain);
-      });
-
-      domainsSet.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        domainSelect.appendChild(opt);
-      });
-    }
-
-    // 2. تهيئة وتدشين رسم الشبكة
-    function initNetwork() {
-      const container = document.getElementById('network-container');
-
-      nodesDataset.clear();
-      edgesDataset.clear();
-
-      nodesDataset.add(allNodes.map(n => ({
-        id: n.id,
-        label: `${n.id}\n${n.title}`,
-        group: n.domain,
-        shape: 'box',
-        margin: 8,
-        font: { face: 'Segoe UI', size: 12 }
-      })));
-
-      edgesDataset.add(allEdges.map((e, idx) => ({
-        id: idx,
-        from: e.from,
-        to: e.to,
-        label: e.label,
-        arrows: 'to',
-        font: { align: 'middle', size: 9 },
-        color: { color: '#94a3b8' }
-      })));
-
-      const graphData = { nodes: nodesDataset, edges: edgesDataset };
-      
-      const options = {
-        nodes: { borderWidth: 1, shadow: true },
-        physics: {
-          barnesHut: { gravitationalConstant: -4000, springLength: 140 }
-        }
-      };
-
-      network = new vis.Network(container, graphData, options);
-
-      // تفاصيل العقدة عند النقر
-      network.on("click", function (params) {
-        if (params.nodes.length > 0) {
-          showSunnahDetails(params.nodes[0]);
-        }
-      });
-    }
-
-    // 3. عرض تفاصيل السنة والتفريعات في اللوحة الجانبية
-    function showSunnahDetails(sunnahId) {
-      const sunnah = allNodes.find(n => n.id === sunnahId);
-      if (!sunnah) return;
-
-      let branchesList = sunnah.branches && sunnah.branches.length > 0
-        ? sunnah.branches.map(b => `<li>${b}</li>`).join("")
-        : "<li>لا توجد تفريعات جزئية مسجلة</li>";
-
-      document.getElementById('details-panel').innerHTML = `
-        <div class="details-card">
-          <h4>${sunnah.id}: ${sunnah.title}</h4>
-          <p><strong>المجال:</strong> ${sunnah.domain} (${sunnah.level})</p>
-          <p><strong>التعريف:</strong> ${sunnah.definition}</p>
-          <hr style="border:0; border-top:1px solid #cbd5e1; margin:8px 0;">
-          <p><strong>المعادلة السببية:</strong></p>
-          <p style="font-size:0.82rem;"><strong>المدخلات:</strong> ${sunnah.cause_input}</p>
-          <p style="font-size:0.82rem;"><strong>العملية:</strong> ${sunnah.cause_process}</p>
-          <p style="font-size:0.82rem;"><strong>المخرجات:</strong> ${sunnah.cause_output}</p>
-          <hr style="border:0; border-top:1px solid #cbd5e1; margin:8px 0;">
-          <p><strong>التفريعات المقاصدية (${sunnah.branches.length}):</strong></p>
-          <ul>${branchesList}</ul>
-        </div>
-      `;
-    }
-
-    // 4. وظائف الفلترة والتركيز
-    function focusOnSunnah(sunnahId) {
-      if (sunnahId === "ALL") {
-        resetView();
-        return;
-      }
-      network.focus(sunnahId, { scale: 1.2, animation: true });
-      network.selectNodes([sunnahId]);
-      showSunnahDetails(sunnahId);
-    }
-
-    function filterByDomain(domain) {
-      if (domain === "ALL") {
-        nodesDataset.clear();
-        nodesDataset.add(allNodes.map(n => ({ id: n.id, label: `${n.id}\n${n.title}`, group: n.domain, shape: 'box' })));
-      } else {
-        const filtered = allNodes.filter(n => n.domain === domain);
-        nodesDataset.clear();
-        nodesDataset.add(filtered.map(n => ({ id: n.id, label: `${n.id}\n${n.title}`, group: n.domain, shape: 'box' })));
-      }
-    }
-
-    function changeLayout(layoutType) {
-      if (layoutType === "hierarchical") {
-        network.setOptions({ layout: { hierarchical: { direction: 'LR', sortMethod: 'directed' } } });
-      } else {
-        network.setOptions({ layout: { hierarchical: false }, physics: { enabled: true } });
-      }
-    }
-
-    function resetView() {
-      network.fit({ animation: true });
-      document.getElementById('sunnah-select').value = "ALL";
-      document.getElementById('domain-select').value = "ALL";
-      filterByDomain("ALL");
-    }
-  </script>
+  });
+</script>
 </body>
 </html>
