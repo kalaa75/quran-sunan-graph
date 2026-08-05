@@ -76,18 +76,26 @@
                 }
 
                 // معالجة العُقد بصورة مرنة
-                // معالجة العُقد بصورة مرنة
-                const formattedNodes = data.nodes.map(node => {
-                    const labelText = node.label || node.title || node.id;
-                    return {
-                        id: node.id,
-                        label: labelText.length > 30 ? labelText.substring(0, 30) + '...' : labelText,
-                        title: node.title || labelText,
-                        raw: node,
-                        shape: 'dot',
-                        size: 16,
-                        font: { size: 14, face: 'system-ui' }
-                    };
+               // معالجة العُقد ومنع التكرار تلقائياً
+                const seenIds = new Set();
+                const formattedNodes = [];
+                const uniqueRawNodes = [];
+
+                data.nodes.forEach(node => {
+                    if (!seenIds.has(node.id)) {
+                        seenIds.add(node.id);
+                        uniqueRawNodes.push(node);
+                        const labelText = node.label || node.title || node.id;
+                        formattedNodes.push({
+                            id: node.id,
+                            label: labelText.length > 30 ? labelText.substring(0, 30) + '...' : labelText,
+                            title: node.title || labelText,
+                            raw: node,
+                            shape: 'dot',
+                            size: 16,
+                            font: { size: 14, face: 'system-ui' }
+                        });
+                    }
                 });
 
                 // معالجة الروابط
