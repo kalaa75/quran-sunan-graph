@@ -79,77 +79,165 @@
     </div>
   </div>
 
-// 1. تحميل البيانات وبناء الشبكة والقائمة المنسدلة
-fetch('./sunan_data.json')
-  .then(response => response.json())
-  .then(data => {
-    // إنشاء مجموعات البيانات لـ Vis Network
-    const nodes = new vis.DataSet(data.nodes);
-    const edges = new vis.DataSet(data.edges);
+  <script>
+    let allNodes = [];
+    let allEdges = [];
+    let network = null;
+    let nodesDataset = new vis.DataSet();
+    let edgesDataset = new vis.DataSet();
 
-    // إعداد حاوي الشبكة والخيارات
-    const container = document.getElementById('network-container');
-    const options = {
-      physics: { enabled: true },
-      nodes: { shape: 'dot', size: 16 }
-    };
-    
-    // تشغيل الشبكة
-    const network = new vis.Network(container, { nodes, edges }, options);
+    // جلب ملف JSON المجمّع تلقائياً عند فتح الصفحة
+    fetch('sunan_data.json')
+      .then(response => {
+        if (!response.ok) throw new Error("تعذر جلب ملف sunan_data.json");
+        return response.json();
+      })
+      .then(data => {
+        allNodes = data.nodes;
+        allEdges = data.edges;
 
-    // 2. تفعيل القائمة المنسدلة للسنن الـ 95 (Dropdown Selector)
-    const selector = document.getElementById('sunan-select'); // تأكد من id القائمة لديك
-    if (selector) {
-      // تعبئة القائمة تلقائياً
-      data.nodes.forEach(node => {
-        const opt = document.createElement('option');
-        opt.value = node.id;
-        opt.textContent = `${node.id}. ${node.label}`;
-        selector.appendChild(opt);
+        document.getElementById('loading').style.display = 'none';
+        initDropdowns();
+        initNetwork();
+      })
+      .catch(err => {
+        document.getElementById('loading').innerText = "خطأ: تعذر تحميل ملف البيانات sunan_data.json. تأكد من وجوده في نفس مجلد الصفحة.";
+        console.error(err);
       });
 
-      // الاستجابة عند اختيار سنة معينة
-      selector.addEventListener('change', (e) => {
-        const selectedId = e.target.value;
-        if (selectedId) {
-          // التركيز على العُقدة المختارة والتكبير عليها
-          network.focus(selectedId, {
-            scale: 1.2,
-            animation: { duration: 1000, easingFunction: 'easeInOutQuad' }
-          });
-          network.selectNodes([selectedId]);
-          
-          // إظهار التفاصيل في اللوحة الجانبية
-          const selectedNode = nodes.get(selectedId);
-          showSidebarDetails(selectedNode);
+    // 1. ملء قوائم الخيارات تلقائياً من البيانات
+    function initDropdowns() {
+      const sunnahSelect = document.getElementById('sunnah-select');
+      const domainSelect = document.getElementById('domain-select');
+      
+      const domainsSet = new Set();
+
+      allNodes.forEach(n => {
+        // إضافة السنة للقائمة
+        const opt = document.createElement('option');
+        opt.value = n.id;
+        opt.textContent = `${n.id}: ${n.title}`;
+        sunnahSelect.appendChild(opt);
+
+        // جمع المجالات لملء قائمة الفلترة
+        if (n.domain) domainsSet.add(n.domain);
+      });
+
+      domainsSet.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        domainSelect.appendChild(opt);
+      });
+    }
+
+    // 2. تهيئة وتدشين رسم الشبكة
+    function initNetwork() {
+      const container = document.getElementById('network-container');
+
+      nodesDataset.clear();
+      edgesDataset.clear();
+
+      nodesDataset.add(allNodes.map(n => ({
+        id: n.id,
+        label: `${n.id}\n${n.title}`,
+        group: n.domain,
+        shape: 'box',
+        margin: 8,
+        font: { face: 'Segoe UI', size: 12 }
+      })));
+
+      edgesDataset.add(allEdges.map((e, idx) => ({
+        id: idx,
+        from: e.from,
+        to: e.to,
+        label: e.label,
+        arrows: 'to',
+        font: { align: 'middle', size: 9 },
+        color: { color: '#94a3b8' }
+      })));
+
+      const graphData = { nodes: nodesDataset, edges: edgesDataset };
+      
+      const options = {
+        nodes: { borderWidth: 1, shadow: true },
+        physics: {
+          barnesHut: { gravitationalConstant: -4000, springLength: 140 }
+        }
+      };
+
+      network = new vis.Network(container, graphData, options);
+
+      // تفاصيل العقدة عند النقر
+      network.on("click", function (params) {
+        if (params.nodes.length > 0) {
+          showSunnahDetails(params.nodes[0]);
         }
       });
     }
 
-    // 3. الاستجابة عند النقر المباشر على أي عقدة داخل الشبكة
-    network.on("click", function (params) {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const selectedNode = nodes.get(nodeId);
-        if (selector) selector.value = nodeId; // تحديث القائمة المنسدلة
-        showSidebarDetails(selectedNode);
+    // 3. عرض تفاصيل السنة والتفريعات في اللوحة الجانبية
+    function showSunnahDetails(sunnahId) {
+      const sunnah = allNodes.find(n => n.id === sunnahId);
+      if (!sunnah) return;
+
+      let branchesList = sunnah.branches && sunnah.branches.length > 0
+        ? sunnah.branches.map(b => `<li>${b}</li>`).join("")
+        : "<li>لا توجد تفريعات جزئية مسجلة</li>";
+
+      document.getElementById('details-panel').innerHTML = `
+        <div class="details-card">
+          <h4>${sunnah.id}: ${sunnah.title}</h4>
+          <p><strong>المجال:</strong> ${sunnah.domain} (${sunnah.level})</p>
+          <p><strong>التعريف:</strong> ${sunnah.definition}</p>
+          <hr style="border:0; border-top:1px solid #cbd5e1; margin:8px 0;">
+          <p><strong>المعادلة السببية:</strong></p>
+          <p style="font-size:0.82rem;"><strong>المدخلات:</strong> ${sunnah.cause_input}</p>
+          <p style="font-size:0.82rem;"><strong>العملية:</strong> ${sunnah.cause_process}</p>
+          <p style="font-size:0.82rem;"><strong>المخرجات:</strong> ${sunnah.cause_output}</p>
+          <hr style="border:0; border-top:1px solid #cbd5e1; margin:8px 0;">
+          <p><strong>التفريعات المقاصدية (${sunnah.branches.length}):</strong></p>
+          <ul>${branchesList}</ul>
+        </div>
+      `;
+    }
+
+    // 4. وظائف الفلترة والتركيز
+    function focusOnSunnah(sunnahId) {
+      if (sunnahId === "ALL") {
+        resetView();
+        return;
       }
-    });
+      network.focus(sunnahId, { scale: 1.2, animation: true });
+      network.selectNodes([sunnahId]);
+      showSunnahDetails(sunnahId);
+    }
 
-  })
-  .catch(err => console.error('خطأ في تحميل البيانات:', err));
+    function filterByDomain(domain) {
+      if (domain === "ALL") {
+        nodesDataset.clear();
+        nodesDataset.add(allNodes.map(n => ({ id: n.id, label: `${n.id}\n${n.title}`, group: n.domain, shape: 'box' })));
+      } else {
+        const filtered = allNodes.filter(n => n.domain === domain);
+        nodesDataset.clear();
+        nodesDataset.add(filtered.map(n => ({ id: n.id, label: `${n.id}\n${n.title}`, group: n.domain, shape: 'box' })));
+      }
+    }
 
-// دالة عرض التفاصيل في اللوحة الجانبية
-function showSidebarDetails(node) {
-  const sidebar = document.getElementById('sidebar-content');
-  if (sidebar && node) {
-    sidebar.innerHTML = `
-      <h3>${node.label}</h3>
-      <p><strong>المجال:</strong> ${node.group || node.domain || 'عام'}</p>
-      <p><strong>المعادلة السببية:</strong> ${node.formula || 'غير محددة'}</p>
-      <p><strong>المقاصد:</strong> ${node.details || ''}</p>
-    `;
-  }
-}
+    function changeLayout(layoutType) {
+      if (layoutType === "hierarchical") {
+        network.setOptions({ layout: { hierarchical: { direction: 'LR', sortMethod: 'directed' } } });
+      } else {
+        network.setOptions({ layout: { hierarchical: false }, physics: { enabled: true } });
+      }
+    }
+
+    function resetView() {
+      network.fit({ animation: true });
+      document.getElementById('sunnah-select').value = "ALL";
+      document.getElementById('domain-select').value = "ALL";
+      filterByDomain("ALL");
+    }
+  </script>
 </body>
 </html>
