@@ -1,0 +1,12 @@
+// جلب بيانات الشبكة ديناميكياً من ملف JSON على GitHub
+fetch('./data/sunan_data.json')
+  .then(response => response.json())
+  .then(graphData => {
+    // بناء شبكة Vis Network أو Cytoscape باستخدام البيانات المحملة
+    const nodesDataset = new vis.DataSet(graphData.nodes);
+    const edgesDataset = new vis.DataSet(graphData.edges);
+    
+    // تشغيل الرسم البياني
+    initNetwork(nodesDataset, edgesDataset);
+  })
+  .catch(error => console.error('خطأ في تحميل ملف البيانات:', error));
