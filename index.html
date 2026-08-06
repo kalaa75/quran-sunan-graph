@@ -169,7 +169,8 @@
                     if (params.nodes.length > 0) {
                         const nodeId = params.nodes[0];
                         if (selectEl) selectEl.value = nodeId;
-                        displayNodeDetails(nodeId, uniqueRawNodes);
+                        const rawNode = uniqueRawNodes.find(n => n.id === nodeId);
+                        if (rawNode) displayNodeDetails(rawNode);
                     }
                 });
 
@@ -180,7 +181,8 @@
                         if (nodeId) {
                             network.selectNodes([nodeId]);
                             network.focus(nodeId, { scale: 1.2, animation: true });
-                            displayNodeDetails(nodeId, uniqueRawNodes);
+                            const rawNode = uniqueRawNodes.find(n => n.id === nodeId);
+                            if (rawNode) displayNodeDetails(rawNode);
                         }
                     });
                 }
@@ -196,10 +198,19 @@
         }
 
         function displayNodeDetails(node) {
+    // إظهار لوحة التفاصيل
+    const panel = document.getElementById('details-panel');
+    if (panel) panel.style.display = 'flex';
+
     // 1. تحديث العنوان والمجال والجذر
     document.getElementById('node-title').textContent = node.title || node.label;
     document.getElementById('node-domain').textContent = node.domain || 'عام';
-    
+
+    const levelEl = document.getElementById('node-level');
+    if (levelEl) {
+        levelEl.textContent = node.level ? `المستوى: ${node.level}` : '';
+    }
+
     // عرض الجذر إن وجد
     const rootEl = document.getElementById('node-root');
     if (rootEl) {
@@ -207,10 +218,18 @@
     }
 
     // 2. تحديث التعريف
-    const defEl = document.getElementById('node-definition');
+    const defEl = document.getElementById('node-def');
     if (defEl) {
         defEl.textContent = node.definition || 'لا يوجد تعريف متاح.';
     }
+
+    // 3. الأسباب/العمليات/النتائج إن وجدت
+    const causeInEl = document.getElementById('node-cause-in');
+    if (causeInEl) causeInEl.textContent = node.cause_in ? `المدخلات: ${node.cause_in}` : '';
+    const causeProcEl = document.getElementById('node-cause-proc');
+    if (causeProcEl) causeProcEl.textContent = node.cause_proc ? `العملية: ${node.cause_proc}` : '';
+    const causeOutEl = document.getElementById('node-cause-out');
+    if (causeOutEl) causeOutEl.textContent = node.cause_out ? `النتائج: ${node.cause_out}` : '';
 
     // 3. عرض الآيات والسور والمقاصد القرآنية المرتبطة
     const refsContainer = document.getElementById('node-quran-refs');
@@ -262,6 +281,10 @@
         }
     }
 }
+
+        // نقطة الانطلاق الفعلية: هذا السطر كان مفقوداً وهو سبب بقاء الصفحة
+        // عالقة عند رسالة "جارٍ الاتصال بملف البيانات..."
+        document.addEventListener('DOMContentLoaded', initGraph);
     </script>
 </body>
 </html>
