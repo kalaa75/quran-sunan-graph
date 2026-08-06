@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -323,3 +326,334 @@ function renderAyahCard(ref) {
     </script>
 </body>
 </html>
+=======
+>>>>>>> a79e61e
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شبكة السنن القرأنية</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { display: flex; height: 100vh; overflow: hidden; background: #f8fafc; color: #1e293b; }
+        #sidebar { width: 360px; background: #ffffff; border-left: 1px solid #e2e8f0; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: -2px 0 10px rgba(0,0,0,0.05); z-index: 10; overflow-y: auto; }
+        #network-container { flex: 1; height: 100%; position: relative; }
+        #mynetwork { width: 100%; height: 100%; }
+        h2 { color: #0f172a; font-size: 1.25rem; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+        .legend-box { display: flex; gap: 6px; flex-wrap: wrap; font-size: 0.8rem; margin-top: 5px; }
+        .legend-tag { padding: 3px 8px; border-radius: 4px; color: white; font-weight: 500; }
+        .search-box { display: flex; flex-direction: column; gap: 5px; }
+        select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; background: #fff; }
+        .info-card { background: #f1f5f9; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .info-title { font-weight: bold; color: #1e3a8a; font-size: 1.1rem; }
+        .info-item { font-size: 0.9rem; line-height: 1.5; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; background: #3b82f6; color: white; margin-left: 5px; }
+        #status-msg { color: #64748b; font-size: 0.9rem; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>شبكة السنن القرأنية</h2>
+        
+        <!-- دليل الألوان -->
+        <div class="legend-box">
+            <span class="legend-tag" style="background: #10b981;">عمران</span>
+            <span class="legend-tag" style="background: #3b82f6;">نفسي</span>
+            <span class="legend-tag" style="background: #f59e0b;">اجتماعي</span>
+            <span class="legend-tag" style="background: #8b5cf6;">كوني</span>
+            <span class="legend-tag" style="background: #ec4899;">حضاري</span>
+        </div>
+
+        <div class="search-box">
+            <label for="sunan-select"><b>البحث عن سنة:</b></label>
+            <select id="sunan-select">
+                <option value="">جاري تحميل القائمة...</option>
+            </select>
+        </div>
+
+        <div id="status-msg">جارٍ الاتصال بملف البيانات...</div>
+
+        <div id="details-panel" class="info-card" style="display: none;">
+            <div id="node-title" class="info-title"></div>
+            <div>
+                <span id="node-domain" class="badge"></span>
+                <span id="node-level" class="badge" style="background:#10b981;"></span>
+            </div>
+            <div id="node-def" class="info-item"></div>
+            <hr style="border: 0; border-top: 1px solid #cbd5e1;">
+            <div id="node-cause-in" class="info-item"></div>
+            <div id="node-cause-proc" class="info-item"></div>
+            <div id="node-cause-out" class="info-item"></div>
+        </div>
+        <!-- حاوية عرض الشواهد القرآنية والمقاصد -->
+
+    </div>
+
+    <div id="network-container">
+        <div id="mynetwork"></div>
+    </div>
+<!-- حاوية عرض الشواهد القرآنية والمقاصد -->
+        <div id="node-quran-refs"></div>
+    <script>
+        let network = null;
+        let nodesDataSet = null;
+
+        async function initGraph() {
+            const statusEl = document.getElementById('status-msg');
+            const selectEl = document.getElementById('sunan-select');
+
+            try {
+                if (statusEl) statusEl.textContent = "جاري قراءة ملف البيانات...";
+                
+                const response = await fetch('sunan_data.json');
+                
+                if (!response.ok) {
+                    throw new Error(`تعذر تحميل الملف (رمز الخطأ: ${response.status})`);
+                }
+
+                const data = await response.json();
+
+                if (!data.nodes || !Array.isArray(data.nodes)) {
+                    throw new Error("تنسيق JSON لا يحتوي على مصفوفة nodes صحيحة");
+                }
+
+                // 1. خريطة الألوان حسب المجال
+                const domainColors = {
+                    'عمران': { background: '#10b981', border: '#047857' },
+                    'نفسي': { background: '#3b82f6', border: '#1d4ed8' },
+                    'اجتماعي': { background: '#f59e0b', border: '#b45309' },
+                    'كوني': { background: '#8b5cf6', border: '#6d28d9' },
+                    'حضاري': { background: '#ec4899', border: '#be185d' }
+                };
+                const defaultColor = { background: '#64748b', border: '#334155' };
+
+                // 2. معالجة العُقد ومنع التكرار
+                const seenIds = new Set();
+                const formattedNodes = [];
+                const uniqueRawNodes = [];
+
+                data.nodes.forEach(node => {
+                    if (node && node.id && !seenIds.has(node.id)) {
+                        seenIds.add(node.id);
+                        uniqueRawNodes.push(node);
+                        
+                        const labelText = node.label || node.title || node.id;
+                        const domainKey = (node.domain || '').trim();
+                        const nodeColor = domainColors[domainKey] || defaultColor;
+
+                        formattedNodes.push({
+                            id: node.id,
+                            label: labelText.length > 30 ? labelText.substring(0, 30) + '...' : labelText,
+                            title: node.title || labelText,
+                            raw: node,
+                            shape: 'dot',
+                            size: 18,
+                            color: nodeColor,
+                            font: { size: 14, face: 'system-ui' }
+                        });
+                    }
+                });
+
+                // 3. معالجة الروابط
+                const formattedEdges = (data.edges || []).map(edge => ({
+                    from: edge.from,
+                    to: edge.to,
+                    label: edge.label || '',
+                    arrows: 'to',
+                    font: { size: 10, align: 'middle' },
+                    color: { color: '#94a3b8' }
+                }));
+
+                nodesDataSet = new vis.DataSet(formattedNodes);
+                const edgesDataSet = new vis.DataSet(formattedEdges);
+
+                const container = document.getElementById('mynetwork');
+                const graphData = { nodes: nodesDataSet, edges: edgesDataSet };
+
+                const options = {
+                    nodes: { borderWidth: 2 },
+                    physics: { barnesHut: { gravitationalConstant: -3000, springLength: 95 } },
+                    interaction: { hover: true, tooltipDelay: 200 }
+                };
+
+                network = new vis.Network(container, graphData, options);
+
+                // 4. تعبئة القائمة المنسدلة بطريقة آمنة
+                if (selectEl) {
+                    selectEl.innerHTML = '<option value="">-- اختر سنة من القائمة (' + formattedNodes.length + ' سنة) --</option>';
+                    uniqueRawNodes.forEach(node => {
+                        const opt = document.createElement('option');
+                        opt.value = node.id;
+                        opt.textContent = `${node.id}: ${node.title || node.label}`;
+                        selectEl.appendChild(opt);
+                    });
+                }
+
+                if (statusEl) statusEl.textContent = `تم تحميل ${formattedNodes.length} سنة بنجاح!`;
+
+                // التفاعل عند النقر من الشبكة
+                // عند اختيار عُقدة من الشبكة
+network.on('selectNode', function (params) {
+    const selectedId = String(params.nodes[0]); // تحويل المعرف إلى نص صريح
+    
+    // البحث عن بيانات العقدة الكاملة من القائمة المحملة من sunan_data.json
+    const nodeData = rawNodesData.find(n => String(n.id) === selectedId);
+    
+    if (nodeData) {
+        displayNodeDetails(nodeData);
+    } else {
+        console.error("لم يتم العثور على بيانات العقدة المعرفة بـ:", selectedId);
+    }
+});
+                // التفاعل من القائمة المنسدلة
+                if (selectEl) {
+                    selectEl.addEventListener('change', function () {
+                        const nodeId = this.value;
+                        if (nodeId) {
+                            network.selectNodes([nodeId]);
+                            network.focus(nodeId, { scale: 1.2, animation: true });
+                            const rawNode = uniqueRawNodes.find(n => n.id === nodeId);
+                            if (rawNode) displayNodeDetails(rawNode);
+                        }
+                    });
+                }
+
+            } catch (err) {
+                console.error(err);
+                if (statusEl) {
+                    statusEl.style.color = 'red';
+                    statusEl.textContent = "حدث خطأ: " + err.message;
+                }
+                if (selectEl) selectEl.innerHTML = '<option value="">فشل التحميل</option>';
+            }
+        }
+
+       function displayNodeDetails(node) {
+    // 1. تحديث العنوان والمجال والجذر
+    const titleEl = document.getElementById('node-title');
+    if (titleEl) titleEl.textContent = node.title || node.label;
+
+    const domainEl = document.getElementById('node-domain');
+    if (domainEl) domainEl.textContent = node.domain || 'عام';
+
+    const rootEl = document.getElementById('node-root');
+    if (rootEl) {
+        rootEl.textContent = node.root ? `الجذر القرآني: [ ${node.root} ]` : '';
+    }
+
+    // 2. تحديث التعريف
+    const defEl = document.getElementById('node-definition');
+    if (defEl) defEl.textContent = node.definition || '';
+
+    // 3. عرض الشواهد القرآنية والمقاصد المدمجة
+    const refsContainer = document.getElementById('node-quran-refs');
+    if (!refsContainer) return;
+
+    const refs = node.quran_references || [];
+
+    if (refs.length === 0) {
+        refsContainer.innerHTML = `
+            <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px; color: #94a3b8; font-size: 0.85rem; text-align: center;">
+                لا توجد آيات مقتطعة مباشرة لهذه السنة في قاعدة البيانات.
+            </div>
+        `;
+        return;
+    }
+
+    // بناء الواجهة للآيات
+    let html = `
+        <div style="margin-top: 15px; border-top: 1px solid #cbd5e1; padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="color: #0f172a; font-size: 0.95rem; margin: 0; display: flex; align-items: center; gap: 6px;">
+                    <span>📖</span> الشواهد والمقاصد القرآنية
+                </h4>
+                <span style="background: #e2e8f0; color: #475569; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: bold;">
+                    ${refs.length} آية
+                </span>
+            </div>
+            <div id="quran-cards-list">
+    `;
+
+    // عرض أول 5 آيات بشكل افتراضي للأداء والنظافة البصرية
+    const initialLimit = 5;
+    const displayRefs = refs.slice(0, initialLimit);
+
+    displayRefs.forEach(ref => {
+        html += renderAyahCard(ref);
+    });
+
+    html += `</div>`;
+
+    // إذا كان هناك أكثر من 5 آيات، نضع زر "عرض المزيد"
+    if (refs.length > initialLimit) {
+        html += `
+            <button id="btn-load-more-refs" style="width: 100%; padding: 8px; margin-top: 5px; background: #f1f5f9; border: 1px dashed #cbd5e1; color: #0284c7; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; transition: all 0.2s;">
+                عرض كافة الآيات الشاهدة (${refs.length - initialLimit} آية إضافية) ▼
+            </button>
+        `;
+    }
+
+    refsContainer.innerHTML = html;
+
+    // إضافة التفاعل لزر عرض المزيد
+    const btnLoadMore = document.getElementById('btn-load-more-refs');
+    if (btnLoadMore) {
+        btnLoadMore.addEventListener('click', function() {
+            const listContainer = document.getElementById('quran-cards-list');
+            let remainingHTML = '';
+            refs.slice(initialLimit).forEach(ref => {
+                remainingHTML += renderAyahCard(ref);
+            });
+            listContainer.insertAdjacentHTML('beforeend', remainingHTML);
+            btnLoadMore.remove(); // إخفاء الزر بعد الفتح
+        });
+    }
+}
+
+// دالة مساعدة لرسم بطاقة الآية الواحدة
+function renderAyahCard(ref) {
+    // معالجة المقاصد المدمجة لعرضها كعلامات مميزة
+    let maqasidHTML = '';
+    if (ref.maqsad) {
+        const maqasidArray = ref.maqsad.split(' • ');
+        maqasidHTML = `<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+            <span style="font-size: 0.75rem; color: #0369a1; font-weight: bold;">🎯 المقاصد:</span>`;
+        maqasidArray.forEach(m => {
+            maqasidHTML += `<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.75rem; padding: 1px 6px; border-radius: 4px;">${m}</span>`;
+        });
+        maqasidHTML += `</div>`;
+    }
+
+    return `
+        <div style="background-color: #ffffff; border-right: 4px solid #10b981; border-radius: 6px; padding: 10px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-top: 1px solid #f1f5f9; border-left: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+            <div style="font-weight: bold; color: #047857; font-size: 0.85rem; margin-bottom: 4px;">
+                سورة ${ref.surah} - آية ${ref.ayah_number}
+            </div>
+            
+            <div style="font-family: 'Amiri', 'Traditional Arabic', serif; font-size: 1.1rem; line-height: 1.8; color: #1e293b; background: #fafafa; padding: 8px 10px; border-radius: 4px; border: 1px solid #f1f5f9; text-align: right;">
+                «${ref.text}»
+            </div>
+
+            ${maqasidHTML}
+
+            ${ref.evidence ? `
+                <div style="font-size: 0.78rem; color: #64748b; font-style: italic; margin-top: 5px; background: #f8fafc; padding: 4px 6px; border-radius: 4px;">
+                    💡 <strong>وجه الاستدلال:</strong> ${ref.evidence}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+        // نقطة الانطلاق الفعلية: هذا السطر كان مفقوداً وهو سبب بقاء الصفحة
+        // عالقة عند رسالة "جارٍ الاتصال بملف البيانات..."
+        document.addEventListener('DOMContentLoaded', initGraph);
+    </script>
+</body>
+</html>
+<<<<<<< HEAD
+=======
+>>>>>>> 30da5dc (إضافة ملفات العرض المزدوج والمفاهيم الشاهدة)
+>>>>>>> a79e61e
