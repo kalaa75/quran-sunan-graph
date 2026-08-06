@@ -197,91 +197,122 @@
             }
         }
 
-        function displayNodeDetails(node) {
-    // إظهار لوحة التفاصيل
-    const panel = document.getElementById('details-panel');
-    if (panel) panel.style.display = 'flex';
-
+       function displayNodeDetails(node) {
     // 1. تحديث العنوان والمجال والجذر
-    document.getElementById('node-title').textContent = node.title || node.label;
-    document.getElementById('node-domain').textContent = node.domain || 'عام';
+    const titleEl = document.getElementById('node-title');
+    if (titleEl) titleEl.textContent = node.title || node.label;
 
-    const levelEl = document.getElementById('node-level');
-    if (levelEl) {
-        levelEl.textContent = node.level ? `المستوى: ${node.level}` : '';
-    }
+    const domainEl = document.getElementById('node-domain');
+    if (domainEl) domainEl.textContent = node.domain || 'عام';
 
-    // عرض الجذر إن وجد
     const rootEl = document.getElementById('node-root');
     if (rootEl) {
-        rootEl.textContent = node.root ? `الجذر: ${node.root}` : '';
+        rootEl.textContent = node.root ? `الجذر القرآني: [ ${node.root} ]` : '';
     }
 
     // 2. تحديث التعريف
-    const defEl = document.getElementById('node-def');
-    if (defEl) {
-        defEl.textContent = node.definition || 'لا يوجد تعريف متاح.';
+    const defEl = document.getElementById('node-definition');
+    if (defEl) defEl.textContent = node.definition || '';
+
+    // 3. عرض الشواهد القرآنية والمقاصد المدمجة
+    const refsContainer = document.getElementById('node-quran-refs');
+    if (!refsContainer) return;
+
+    const refs = node.quran_references || [];
+
+    if (refs.length === 0) {
+        refsContainer.innerHTML = `
+            <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px; color: #94a3b8; font-size: 0.85rem; text-align: center;">
+                لا توجد آيات مقتطعة مباشرة لهذه السنة في قاعدة البيانات.
+            </div>
+        `;
+        return;
     }
 
-    // 3. الأسباب/العمليات/النتائج إن وجدت
-    const causeInEl = document.getElementById('node-cause-in');
-    if (causeInEl) causeInEl.textContent = node.cause_in ? `المدخلات: ${node.cause_in}` : '';
-    const causeProcEl = document.getElementById('node-cause-proc');
-    if (causeProcEl) causeProcEl.textContent = node.cause_proc ? `العملية: ${node.cause_proc}` : '';
-    const causeOutEl = document.getElementById('node-cause-out');
-    if (causeOutEl) causeOutEl.textContent = node.cause_out ? `النتائج: ${node.cause_out}` : '';
+    // بناء الواجهة للآيات
+    let html = `
+        <div style="margin-top: 15px; border-top: 1px solid #cbd5e1; padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="color: #0f172a; font-size: 0.95rem; margin: 0; display: flex; align-items: center; gap: 6px;">
+                    <span>📖</span> الشواهد والمقاصد القرآنية
+                </h4>
+                <span style="background: #e2e8f0; color: #475569; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: bold;">
+                    ${refs.length} آية
+                </span>
+            </div>
+            <div id="quran-cards-list">
+    `;
 
-    // 3. عرض الآيات والسور والمقاصد القرآنية المرتبطة
-    const refsContainer = document.getElementById('node-quran-refs');
-    if (refsContainer) {
-        if (node.quran_references && node.quran_references.length > 0) {
-            let html = `
-                <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                    <h4 style="color: #0f172a; font-size: 0.95rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-                        <span>📖</span> الشواهد القرآنية والمقاصد
-                    </h4>
-            `;
+    // عرض أول 5 آيات بشكل افتراضي للأداء والنظافة البصرية
+    const initialLimit = 5;
+    const displayRefs = refs.slice(0, initialLimit);
 
-            node.quran_references.forEach((ref, index) => {
-                html += `
-                    <div style="background-color: #f8fafc; border-right: 4px solid #10b981; border-radius: 6px; padding: 10px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-weight: bold; color: #047857; font-size: 0.85rem;">
-                                سورة ${ref.surah} - الآية ${ref.ayah_number}
-                            </span>
-                        </div>
-                        
-                        <div style="font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', serif; font-size: 1.15rem; line-height: 1.8; color: #1e293b; background: #ffffff; padding: 8px 12px; border-radius: 4px; border: 1px solid #edf2f7; text-align: right; margin-bottom: 6px;">
-                            «${ref.text}»
-                        </div>
+    displayRefs.forEach(ref => {
+        html += renderAyahCard(ref);
+    });
 
-                        ${ref.maqsad ? `
-                            <div style="font-size: 0.82rem; color: #475569; margin-top: 4px;">
-                                <strong style="color: #0369a1;">🎯 المقصد:</strong> ${ref.maqsad}
-                            </div>
-                        ` : ''}
+    html += `</div>`;
 
-                        ${ref.evidence ? `
-                            <div style="font-size: 0.8rem; color: #64748b; font-style: italic; margin-top: 2px;">
-                                💡 <strong>وجه الاستدلال:</strong> ${ref.evidence}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
+    // إذا كان هناك أكثر من 5 آيات، نضع زر "عرض المزيد"
+    if (refs.length > initialLimit) {
+        html += `
+            <button id="btn-load-more-refs" style="width: 100%; padding: 8px; margin-top: 5px; background: #f1f5f9; border: 1px dashed #cbd5e1; color: #0284c7; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; transition: all 0.2s;">
+                عرض كافة الآيات الشاهدة (${refs.length - initialLimit} آية إضافية) ▼
+            </button>
+        `;
+    }
+
+    refsContainer.innerHTML = html;
+
+    // إضافة التفاعل لزر عرض المزيد
+    const btnLoadMore = document.getElementById('btn-load-more-refs');
+    if (btnLoadMore) {
+        btnLoadMore.addEventListener('click', function() {
+            const listContainer = document.getElementById('quran-cards-list');
+            let remainingHTML = '';
+            refs.slice(initialLimit).forEach(ref => {
+                remainingHTML += renderAyahCard(ref);
             });
-
-            html += `</div>`;
-            refsContainer.innerHTML = html;
-        } else {
-            refsContainer.innerHTML = `
-                <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px; color: #94a3b8; font-size: 0.85rem;">
-                    لا توجد آيات مقتطعة مباشرة لهذه السنة في قاعدة البيانات.
-                </div>
-            `;
-        }
+            listContainer.insertAdjacentHTML('beforeend', remainingHTML);
+            btnLoadMore.remove(); // إخفاء الزر بعد الفتح
+        });
     }
 }
 
+// دالة مساعدة لرسم بطاقة الآية الواحدة
+function renderAyahCard(ref) {
+    // معالجة المقاصد المدمجة لعرضها كعلامات مميزة
+    let maqasidHTML = '';
+    if (ref.maqsad) {
+        const maqasidArray = ref.maqsad.split(' • ');
+        maqasidHTML = `<div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+            <span style="font-size: 0.75rem; color: #0369a1; font-weight: bold;">🎯 المقاصد:</span>`;
+        maqasidArray.forEach(m => {
+            maqasidHTML += `<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.75rem; padding: 1px 6px; border-radius: 4px;">${m}</span>`;
+        });
+        maqasidHTML += `</div>`;
+    }
+
+    return `
+        <div style="background-color: #ffffff; border-right: 4px solid #10b981; border-radius: 6px; padding: 10px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-top: 1px solid #f1f5f9; border-left: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+            <div style="font-weight: bold; color: #047857; font-size: 0.85rem; margin-bottom: 4px;">
+                سورة ${ref.surah} - آية ${ref.ayah_number}
+            </div>
+            
+            <div style="font-family: 'Amiri', 'Traditional Arabic', serif; font-size: 1.1rem; line-height: 1.8; color: #1e293b; background: #fafafa; padding: 8px 10px; border-radius: 4px; border: 1px solid #f1f5f9; text-align: right;">
+                «${ref.text}»
+            </div>
+
+            ${maqasidHTML}
+
+            ${ref.evidence ? `
+                <div style="font-size: 0.78rem; color: #64748b; font-style: italic; margin-top: 5px; background: #f8fafc; padding: 4px 6px; border-radius: 4px;">
+                    💡 <strong>وجه الاستدلال:</strong> ${ref.evidence}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
         // نقطة الانطلاق الفعلية: هذا السطر كان مفقوداً وهو سبب بقاء الصفحة
         // عالقة عند رسالة "جارٍ الاتصال بملف البيانات..."
         document.addEventListener('DOMContentLoaded', initGraph);
