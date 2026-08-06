@@ -165,15 +165,19 @@
                 if (statusEl) statusEl.textContent = `تم تحميل ${formattedNodes.length} سنة بنجاح!`;
 
                 // التفاعل عند النقر من الشبكة
-                network.on("selectNode", function (params) {
-                    if (params.nodes.length > 0) {
-                        const nodeId = params.nodes[0];
-                        if (selectEl) selectEl.value = nodeId;
-                        const rawNode = uniqueRawNodes.find(n => n.id === nodeId);
-                        if (rawNode) displayNodeDetails(rawNode);
-                    }
-                });
-
+                // عند اختيار عُقدة من الشبكة
+network.on('selectNode', function (params) {
+    const selectedId = String(params.nodes[0]); // تحويل المعرف إلى نص صريح
+    
+    // البحث عن بيانات العقدة الكاملة من القائمة المحملة من sunan_data.json
+    const nodeData = rawNodesData.find(n => String(n.id) === selectedId);
+    
+    if (nodeData) {
+        displayNodeDetails(nodeData);
+    } else {
+        console.error("لم يتم العثور على بيانات العقدة المعرفة بـ:", selectedId);
+    }
+});
                 // التفاعل من القائمة المنسدلة
                 if (selectEl) {
                     selectEl.addEventListener('change', function () {
