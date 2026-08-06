@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة المعارف والسنن القرآنية</title>
+    
+    <!-- مكتبة Vis.js لتصور الشبكات -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- خط أميري للآيات القرآنية -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* الشريط العلوي */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+        }
+
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* شريط زر التبديل بين العروض */
+        .view-switcher {
+            display: flex;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            gap: 4px;
+        }
+
+        .view-btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #64748b;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .view-btn.active {
+            background: #0284c7;
+            color: #ffffff;
+            box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
+        }
+
+        /* الحاوية الرئيسية */
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 61px);
+            position: relative;
+        }
+
+        /* منطقة الخريطة */
+        #network-container {
+            flex: 1;
+            height: 100%;
+            background-color: #f8fafc;
+        }
+
+        /* الشريط الجانبي للتفاصيل */
+        .sidebar {
+            width: 420px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.04);
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0369a1;
+            margin-bottom: 6px;
+        }
+
+        .badge-domain {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            border: 1px solid #bae6fd;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        /* تنسيقات البطاقات */
+        .info-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .info-card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-card-body {
+            font-size: 0.9rem;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+
+        .ayah-card {
+            background: #ffffff;
+            border-right: 4px solid #10b981;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-top: 1px solid #f1f5f9;
+            border-left: 1px solid #f1f5f9;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .ayah-header {
+            font-weight: 700;
+            color: #047857;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .ayah-text {
+            font-family: 'Amiri', serif;
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #0f172a;
+            background: #fafafa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #f1f5f9;
+            text-align: right;
+        }
+
+        .maqasid-badges {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .maqsad-tag {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            font-size: 0.75rem;
+            padding: 1px 7px;
+            border-radius: 4px;
+        }
+
+        .evidence-box {
+            font-size: 0.8rem;
+            color: #475569;
+            margin-top: 6px;
+            background: #f8fafc;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border-right: 2px solid #cbd5e1;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px 20px;
+            font-size: 0.95rem;
+        }
+
+        #btn-load-more {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            background: #f1f5f9;
+            border: 1px dashed #cbd5e1;
+            color: #0284c7;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        #btn-load-more:hover {
+            background: #e2e8f0;
+            color: #0369a1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي والتنقل -->
+    <header>
+        <div class="header-title">
+            <span>🏛️</span> منصة المعارف والسنن القرآنية
+        </div>
+
+        <div class="view-switcher">
+            <button id="btn-sunan-view" class="view-btn active" onclick="switchViewMode('sunan')">
+                🌐 شبكة السنن الكلية
+            </button>
+            <button id="btn-concepts-view" class="view-btn" onclick="switchViewMode('concepts')">
+                📖 شبكة المفاهيم والآيات
+            </button>
+        </div>
+    </header>
+
+    <!-- الحاوية الرئيسية -->
+    <div class="main-container">
+        <!-- الخريطة الشبكية -->
+        <div id="network-container"></div>
+
+        <!-- اللوح الجانبي للمعلومات -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div id="node-title" class="sidebar-title">اختر عُقدة من الشبكة</div>
+                <div>
+                    <span id="node-domain" class="badge-domain">التفاصيل المعرفية</span>
+                    <span id="node-root" style="font-size: 0.8rem; color: #64748b; margin-right: 6px;"></span>
+                </div>
+            </div>
+
+            <div id="sidebar-content-area" class="sidebar-content">
+                <div class="empty-state">
+                    💡 انقر على أي سنة أو مفهوم داخل الخريطة التفاعلية لعرض تحليله المفصل والشواهد القرآنية والمقاصد.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let network = null;
+        let currentViewMode = 'sunan';
+        let rawNodesData = [];
+        let dataCache = {
+            sunan: null,
+            concepts: null
+        };
+
+        // خيارات رسم الشبكة بـ Vis.js
+        const networkOptions = {
+            nodes: {
+                shape: 'dot',
+                size: 20,
+                font: { size: 14, face: 'Cairo', color: '#0f172a' },
+                borderWidth: 2,
+                shadow: true
+            },
+            edges: {
+                width: 1.5,
+                color: { color: '#cbd5e1', highlight: '#0284c7' },
+                arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+                font: { size: 11, face: 'Cairo', align: 'middle' },
+                smooth: { type: 'continuous' }
+            },
+            physics: {
+                stabilization: false,
+                barnesHut: { gravitationalConstant: -3000, springLength: 120 }
+            },
+            interaction: { hover: true, tooltipDelay: 200 }
+        };
+
+        // دالة التبديل بين العرضين
+        function switchViewMode(mode) {
+            currentViewMode = mode;
+            
+            // تحديث تصميم الأزرار
+            document.getElementById('btn-sunan-view').classList.toggle('active', mode === 'sunan');
+            document.getElementById('btn-concepts-view').classList.toggle('active', mode === 'concepts');
+
+            // التصفير البصري للوحة الجانبية
+            resetSidebar();
+
+            const targetFile = mode === 'sunan' ? 'sunan_data.json' : 'concepts_data.json';
+
+            if (dataCache[mode]) {
+                renderNetwork(dataCache[mode]);
+            } else {
+                fetch(targetFile)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`تعذر تحميل الملف: ${targetFile}`);
+                        return response.json();
+                    })
+                    .then(data => {
+                        dataCache[mode] = data;
+                        renderNetwork(data);
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        document.getElementById('network-container').innerHTML = `
+                            <div class="empty-state" style="margin-top: 100px;">
+                                ⚠️ تعذر تحميل ملف البيانات <code>${targetFile}</code>.<br>
+                                يرجى التأكد من تشغيل سكريبت الاستخراج المخصص وإيداع الملف في نفس مجلد الموقع.
+                            </div>
+                        `;
+                    });
+            }
+        }
+
+        // دالة رسم الشبكة التفاعلية
+        function renderNetwork(data) {
+            rawNodesData = data.nodes || [];
+
+            // تجهيز البيانات لـ Vis.js
+            const nodes = new vis.DataSet(data.nodes.map(node => ({
+                id: node.id,
+                label: node.title || node.label,
+                group: node.domain || 'عام',
+                color: currentViewMode === 'sunan' ? '#0284c7' : '#10b981'
+            })));
+
+            const edges = new vis.DataSet(data.edges || []);
+
+            const container = document.getElementById('network-container');
+            container.innerHTML = ''; // مسح المحتوى السابق
+            
+            network = new vis.Network(container, { nodes, edges }, networkOptions);
+
+            // ربط حدث اختيار العقدة
+            network.on('selectNode', function (params) {
+                const selectedId = String(params.nodes[0]);
+                const nodeData = rawNodesData.find(n => String(n.id) === selectedId);
+                if (nodeData) {
+                    displayNodeDetails(nodeData);
+                }
+            });
+        }
+
+        // دالة عرض التفاصيل في اللوح الجانبي حسب نوع النمط المختار
+        function displayNodeDetails(node) {
+            document.getElementById('node-title').textContent = node.title || node.label;
+            document.getElementById('node-domain').textContent = node.domain || 'عام';
+            
+            const rootEl = document.getElementById('node-root');
+            rootEl.textContent = node.root ? `[ الجذر: ${node.root} ]` : '';
+
+            const contentArea = document.getElementById('sidebar-content-area');
+
+            if (currentViewMode === 'sunan') {
+                // العرض الكلي: عرض التحليل السنني والمُدخلات والمخرجات
+                contentArea.innerHTML = `
+                    <div class="info-card">
+                        <div class="info-card-title">📖 تعريف السنة</div>
+                        <div class="info-card-body">${node.definition || 'لا يوجد تعريف مسجل.'}</div>
+                    </div>
+
+                    <div class="info-card" style="border-right: 3px solid #0284c7;">
+                        <div class="info-card-title">📥 المُدخلات (أسباب السلوك)</div>
+                        <div class="info-card-body">${node.cause_input || 'غير محدد'}</div>
+                    </div>
+
+                    <div class="info-card" style="border-right: 3px solid #f59e0b;">
+                        <div class="info-card-title">⚙️ المعالجة (التدافع والاستجابة)</div>
+                        <div class="info-card-body">${node.cause_process || 'غير محدد'}</div>
+                    </div>
+
+                    <div class="info-card" style="border-right: 3px solid #10b981;">
+                        <div class="info-card-title">📤 المخرجات (الأثر التنموي/الحضاري)</div>
+                        <div class="info-card-body">${node.cause_output || 'غير محدد'}</div>
+                    </div>
+
+                    ${node.has_feedback ? `
+                        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; text-align: center;">
+                            🔄 تتضمن نظام تغذية راجعة سننياً (Feedback Loop)
+                        </div>
+                    ` : ''}
+                `;
+            } else {
+                // العرض التفصيلي: عرض المفاهيم القرآنية والشواهد والمقاصد
+                const refs = node.quran_references || [];
+                
+                let html = `
+                    <div class="info-card">
+                        <div class="info-card-title">💡 المفهوم والمحتوى</div>
+                        <div class="info-card-body">${node.definition || ''}</div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0 10px 0;">
+                        <h4 style="font-size: 0.95rem; color: #0f172a; margin: 0;">📖 الشواهد والمقاصد القرآنية</h4>
+                        <span style="background: #e2e8f0; color: #475569; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 700;">
+                            ${refs.length} آية
+                        </span>
+                    </div>
+                `;
+
+                if (refs.length === 0) {
+                    html += `
+                        <div class="empty-state" style="padding: 20px;">
+                            لا توجد آيات مقتطعة مباشرة لهذه السنة في قاعدة البيانات.
+                        </div>
+                    `;
+                } else {
+                    html += `<div id="quran-cards-list">`;
+                    const initialLimit = 5;
+                    const displayRefs = refs.slice(0, initialLimit);
+
+                    displayRefs.forEach(ref => {
+                        html += renderAyahCard(ref);
+                    });
+
+                    html += `</div>`;
+
+                    if (refs.length > initialLimit) {
+                        html += `
+                            <button id="btn-load-more" onclick="loadMoreAyahs()">
+                                عرض كافة الآيات الشاهدة (${refs.length - initialLimit} آية إضافية) ▼
+                            </button>
+                        `;
+                    }
+                }
+
+                contentArea.innerHTML = html;
+                window.currentRefs = refs; // حفظ مؤقت لتقسيم التصفح
+            }
+        }
+
+        // دالة رسم بطاقة الآية الواحدة
+        function renderAyahCard(ref) {
+            let maqasidHTML = '';
+            if (ref.maqsad) {
+                const maqasidArray = ref.maqsad.split(' • ');
+                maqasidHTML = `
+                    <div class="maqasid-badges">
+                        <span style="font-size: 0.75rem; color: #0369a1; font-weight: 700;">🎯 المقاصد:</span>
+                        ${maqasidArray.map(m => `<span class="maqsad-tag">${m}</span>`).join('')}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="ayah-card">
+                    <div class="ayah-header">
+                        سورة ${ref.surah} - آية ${ref.ayah_number}
+                    </div>
+                    
+                    <div class="ayah-text">
+                        «${ref.text}»
+                    </div>
+
+                    ${maqasidHTML}
+
+                    ${ref.evidence ? `
+                        <div class="evidence-box">
+                            💡 <strong>وجه الاستدلال:</strong> ${ref.evidence}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // دالة تحميل بقية الآيات عند النقر على الزر
+        function loadMoreAyahs() {
+            const listContainer = document.getElementById('quran-cards-list');
+            const btnLoadMore = document.getElementById('btn-load-more');
+            const refs = window.currentRefs || [];
+
+            let remainingHTML = '';
+            refs.slice(5).forEach(ref => {
+                remainingHTML += renderAyahCard(ref);
+            });
+
+            listContainer.insertAdjacentHTML('beforeend', remainingHTML);
+            if (btnLoadMore) btnLoadMore.remove();
+        }
+
+        // إعادة ضبط اللوحة الجانبية
+        function resetSidebar() {
+            document.getElementById('node-title').textContent = 'اختر عُقدة من الشبكة';
+            document.getElementById('node-domain').textContent = 'التفاصيل المعرفية';
+            document.getElementById('node-root').textContent = '';
+            document.getElementById('sidebar-content-area').innerHTML = `
+                <div class="empty-state">
+                    💡 انقر على أي سنة أو مفهوم داخل الخريطة التفاعلية لعرض تحليله المفصل والشواهد القرآنية والمقاصد.
+                </div>
+            `;
+        }
+
+        // بدء البدء الافتراضي عند فتح الصفحة
+        window.onload = () => {
+            switchViewMode('sunan');
+        };
+    </script>
+</body>
+</html>
